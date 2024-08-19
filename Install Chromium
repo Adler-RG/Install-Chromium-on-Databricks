@@ -1,0 +1,108 @@
+//How to install Chromium in databricks. Stable
+# MAGIC %md
+# MAGIC #Download and unzip the Chrome driver and ensure its the latest version
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC version=curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE
+# MAGIC wget -N https://chromedriver.storage.googleapis.com/${version}/chromedriver_linux64.zip  -O /tmp/chromedriver_linux64.zip
+# MAGIC unzip /tmp/chromedriver_linux64.zip -d /tmp/chromedriver/
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #Get Ubuntu updates
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC sudo rm -r /var/lib/apt/lists/* 
+# MAGIC sudo apt clean && 
+# MAGIC    sudo apt update --fix-missing -y
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #Add chrome and necessary packages
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC sudo curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add
+# MAGIC sudo echo "deb https://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list
+# MAGIC sudo apt-get -y update
+# MAGIC sudo apt-get -y install google-chrome-stable
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC #Set up the browser
+
+# COMMAND ----------
+
+def init_chrome_browser(download_path, url):     
+    options = Options()
+    prefs = {'download.default_directory' : download_path, 
+             'profile.default_content_setting_values.automatic_downloads': 1, 
+             "download.prompt_for_download": False,
+             "download.directory_upgrade": True,   
+             "safebrowsing.enabled": True ,
+             "translate_whitelists": {"vi":"en"},
+             "translate":{"enabled":"true"}
+             }
+    options.add_experimental_option('prefs', prefs)
+    options.add_argument('--no-sandbox')
+    options.add_argument('--headless')    # wont work without this feature in databricks can't display browser
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--start-maximized')
+    options.add_argument('window-size=2560,1440')
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--ignore-ssl-errors')
+    options.add_argument('--lang=en')
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    options.headless = True
+    try:
+      options.add_argument(f'user-agent={user_agent}')
+    except:
+      pass
+    # browser = webdriver.Chrome(service=Service(chrome_driver_path), options=options)
+    browser = webdriver.Chrome(options=options)
+    #print('Pausing to allow for translation options to kick in')
+    #time.sleep(15) # Adding this line worked for some for translation but not for me
+    browser.get(url)
+    return browser
+
+# COMMAND ----------
+
+def init_chrome_browser_2(download_path, url, size1, size2): #Use this function when server does not allow to access the website, and set the desired resolution
+    display = Display(visible=0, size=(size1,size2))
+    display.start()    
+    options = Options()
+    prefs = {'download.default_directory' : download_path, 
+             'profile.default_content_setting_values.automatic_downloads': 1, 
+             "download.prompt_for_download": False,
+             "download.directory_upgrade": True,   
+             "safebrowsing.enabled": True ,
+             "translate_whitelists": {"vi":"en"},
+             "translate":{"enabled":"true"}
+             }
+    options.add_experimental_option('prefs', prefs)
+    options.add_argument('--no-sandbox')
+    # options.add_argument('--headless')    # wont work without this feature in databricks can't display browser
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--start-maximized')
+    options.add_argument(f'window-size={size1},{size2}')
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--ignore-ssl-errors')
+    options.add_argument('--lang=en')
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    # options.headless = True
+    # user_agent = 'python-requests/2.22.0'
+    try:
+      options.add_argument(f'user-agent={user_agent}')
+    except:
+      pass
+    browser = webdriver.Chrome(options=options)
+    browser.get(url)
+    return browser
